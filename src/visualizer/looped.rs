@@ -389,7 +389,7 @@ fn get_angle_from_pi_rotation(
 
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::FRAC_PI_2;
+    use core::f32::consts::FRAC_PI_2;
 
     use super::*;
 

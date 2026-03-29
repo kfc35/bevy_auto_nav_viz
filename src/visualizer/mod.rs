@@ -568,7 +568,7 @@ fn get_closest_point_in_dir(
 
 #[cfg(test)]
 mod tests {
-    use std::f32::consts::FRAC_PI_2;
+    use core::f32::consts::FRAC_PI_2;
 
     use super::*;
 

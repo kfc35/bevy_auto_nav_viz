@@ -11,7 +11,7 @@
 //! [`AutoNavigationConfig`](bevy::input_focus::directional_navigation::AutoNavigationConfig).
 //! Changing the navigation config will result in different navigation behavior
 //! (and thus will change the visualization).
-use std::f32::consts::PI;
+use core::f32::consts::PI;
 
 use bevy::ecs::system::SystemParam;
 use bevy::input::keyboard::Key;
