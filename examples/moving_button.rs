@@ -17,9 +17,8 @@ use bevy::ecs::system::SystemParam;
 use bevy::input::keyboard::Key;
 use bevy::input_focus::directional_navigation::AutoNavigationConfig;
 use bevy::input_focus::{
-    InputDispatchPlugin, InputFocus, InputFocusVisible,
-    directional_navigation::DirectionalNavigationMap,
-    directional_navigation::DirectionalNavigationPlugin,
+    FocusCause, InputFocus, InputFocusVisible, directional_navigation::DirectionalNavigationMap,
+    directional_navigation::DirectionalNavigationPlugin, directional_navigation::NavNeighbor,
 };
 use bevy::math::CompassOctant;
 use bevy::platform::collections::HashSet;
@@ -29,11 +28,7 @@ use bevy_auto_nav_viz::AutoNavVizPlugin;
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins,
-            InputDispatchPlugin,
-            DirectionalNavigationPlugin,
-        ))
+        .add_plugins((DefaultPlugins, DirectionalNavigationPlugin))
         .insert_resource(InputFocusVisible(true))
         // Example specific resource
         .init_resource::<ActionState>()
@@ -156,7 +151,7 @@ fn setup(
         "Center Button",
     );
     commands.entity(root_id).add_child(center_button);
-    input_focus.set(center_button);
+    input_focus.set(center_button, FocusCause::Navigated);
 
     let moving_button = spawn_button(
         &mut commands,
@@ -270,61 +265,55 @@ fn process_toggles(
         }
     }
     if keyboard.just_pressed(Key::Character("4".into())) {
-        if override_map
-            .get_neighbor(buttons[0], CompassOctant::East)
-            .is_none()
-        {
+        if override_map.get_neighbor(buttons[0], CompassOctant::East) == NavNeighbor::Auto {
             override_map.add_looping_edges(&[buttons[0], buttons[1]], CompassOctant::East);
         } else {
             override_map
                 .neighbors
                 .get_mut(&buttons[0])
                 .unwrap()
-                .neighbors[CompassOctant::East.to_index()] = None;
+                .neighbors[CompassOctant::East.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[0])
                 .unwrap()
-                .neighbors[CompassOctant::West.to_index()] = None;
+                .neighbors[CompassOctant::West.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[1])
                 .unwrap()
-                .neighbors[CompassOctant::East.to_index()] = None;
+                .neighbors[CompassOctant::East.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[1])
                 .unwrap()
-                .neighbors[CompassOctant::West.to_index()] = None;
+                .neighbors[CompassOctant::West.to_index()] = NavNeighbor::Auto;
         }
     }
     if keyboard.just_pressed(Key::Character("5".into())) {
-        if override_map
-            .get_neighbor(buttons[0], CompassOctant::North)
-            .is_none()
-        {
+        if override_map.get_neighbor(buttons[0], CompassOctant::North) == NavNeighbor::Auto {
             override_map.add_looping_edges(&[buttons[0], buttons[1]], CompassOctant::North);
         } else {
             override_map
                 .neighbors
                 .get_mut(&buttons[0])
                 .unwrap()
-                .neighbors[CompassOctant::North.to_index()] = None;
+                .neighbors[CompassOctant::North.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[0])
                 .unwrap()
-                .neighbors[CompassOctant::South.to_index()] = None;
+                .neighbors[CompassOctant::South.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[1])
                 .unwrap()
-                .neighbors[CompassOctant::North.to_index()] = None;
+                .neighbors[CompassOctant::North.to_index()] = NavNeighbor::Auto;
             override_map
                 .neighbors
                 .get_mut(&buttons[1])
                 .unwrap()
-                .neighbors[CompassOctant::South.to_index()] = None;
+                .neighbors[CompassOctant::South.to_index()] = NavNeighbor::Auto;
         }
     }
     if keyboard.just_pressed(Key::Character("6".into())) {
