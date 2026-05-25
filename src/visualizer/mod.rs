@@ -1,5 +1,8 @@
 use bevy::ecs::entity::{EntityHashMap, EntityHashSet};
-use bevy::input_focus::{InputFocus, directional_navigation::NavNeighbors};
+use bevy::input_focus::{
+    InputFocus,
+    directional_navigation::{NavNeighbor, NavNeighbors},
+};
 use bevy::math::CompassOctant;
 use bevy::prelude::*;
 
@@ -227,9 +230,10 @@ pub fn draw_nav_viz(
     mut asymm_straight_edge_merger: AsymmetricalStraightEdgeMerger,
 ) {
     let config = config_store.config::<AutoNavVizGizmoConfigGroup>().1;
+    let focus = input_focus.get();
     let entries_to_draw_nav = match config.draw_mode {
         AutoNavVizDrawMode::EnabledForCurrentFocus => {
-            if let Some(entity) = &input_focus.0
+            if let Some(entity) = focus.as_ref()
                 && let Some(neighbors) = nav_viz_map.map.get_neighbors(*entity)
             {
                 vec![(entity, neighbors)]
@@ -258,7 +262,9 @@ pub fn draw_nav_viz(
             .entry(*entity)
             .or_insert(Oklcha::sequential_dispersed(entity.index_u32()).into());
         for (i, maybe_neighbor) in neighbors.neighbors.iter().enumerate() {
-            let Some(neighbor) = maybe_neighbor else {
+            // We only care to draw edges to neighbors that have been explicitly set in our own nav map.
+            // Auto in our nav map means unset, and Blocked means specifically no edge.
+            let NavNeighbor::Set(neighbor) = maybe_neighbor else {
                 continue;
             };
             let Some(from_pos_data) = nav_viz_map.entity_viz_pos_data.get(entity) else {
@@ -274,8 +280,8 @@ pub fn draw_nav_viz(
                 // (available in Bevy 0.19)
                 continue;
             };
-            let nav_edge_is_symmetrical =
-                nav_viz_map.map.get_neighbor(*neighbor, dir.opposite()) == Some(*entity);
+            let nav_edge_is_symmetrical = nav_viz_map.map.get_neighbor(*neighbor, dir.opposite())
+                == NavNeighbor::Set(*entity);
             // If the draw mode merges symmetrical edges and this is a symmetrical edge,
             // We should only draw the edge once.
             if nav_edge_is_symmetrical
