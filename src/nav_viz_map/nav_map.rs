@@ -1,5 +1,5 @@
 use bevy::input_focus::directional_navigation::{
-    AutoNavigationConfig, DirectionalNavigationMap, FocusableArea, NavNeighbors,
+    AutoNavigationConfig, DirectionalNavigationMap, FocusableArea, NavNeighbor, NavNeighbors,
     auto_generate_navigation_edges,
 };
 use bevy::prelude::*;
@@ -38,8 +38,10 @@ fn add_overrides_to_nav_viz_map(
 ) {
     if let Some(existing_nav_neighbors) = nav_map.neighbors.get_mut(entity) {
         for (i, maybe_neighbor_override) in override_neighbors.neighbors.iter().enumerate() {
-            if let Some(neighbor_override) = maybe_neighbor_override {
-                existing_nav_neighbors.neighbors[i] = Some(*neighbor_override);
+            if let NavNeighbor::Set(neighbor_override) = *maybe_neighbor_override {
+                existing_nav_neighbors.neighbors[i] = NavNeighbor::Set(neighbor_override);
+            } else if NavNeighbor::Blocked == *maybe_neighbor_override {
+                existing_nav_neighbors.neighbors[i] = NavNeighbor::Blocked;
             }
         }
     }
@@ -55,7 +57,7 @@ mod tests {
     fn assert_neighbors(
         nav_map: &DirectionalNavigationMap,
         entity: Entity,
-        expected_neighbors: [Option<Entity>; 8],
+        expected_neighbors: [NavNeighbor; 8],
     ) {
         assert_eq!(
             nav_map.get_neighbor(entity, CompassOctant::North),
@@ -123,14 +125,14 @@ mod tests {
             &nav_map,
             e1,
             [
-                None,
-                Some(e3), // NE
-                Some(e3), // E
-                Some(e2), // SE
-                Some(e2), // S
-                Some(e2), // SW
-                None,
-                None,
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e3), // NE
+                NavNeighbor::Set(e3), // E
+                NavNeighbor::Set(e2), // SE
+                NavNeighbor::Set(e2), // S
+                NavNeighbor::Set(e2), // SW
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
             ],
         );
 
@@ -138,14 +140,14 @@ mod tests {
             &nav_map,
             e2,
             [
-                Some(e1), // N
-                Some(e3), // NE
-                Some(e3), // E
-                None,
-                None,
-                None,
-                None,
-                Some(e1), // NW
+                NavNeighbor::Set(e1), // N
+                NavNeighbor::Set(e3), // NE
+                NavNeighbor::Set(e3), // E
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e1), // NW
             ],
         );
 
@@ -153,14 +155,14 @@ mod tests {
             &nav_map,
             e3,
             [
-                None,
-                None,
-                None,
-                None,
-                Some(e2), // S
-                Some(e2), // SW
-                Some(e1), // W
-                Some(e1), // NW
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e2), // S
+                NavNeighbor::Set(e2), // SW
+                NavNeighbor::Set(e1), // W
+                NavNeighbor::Set(e1), // NW
             ],
         );
     }
@@ -176,6 +178,8 @@ mod tests {
         manual_map.add_symmetrical_edge(e3, e1, CompassOctant::East);
         manual_map.add_edge(e2, e3, CompassOctant::North);
         manual_map.add_symmetrical_edge(e4, e1, CompassOctant::NorthEast);
+        manual_map.block_edge(e1, CompassOctant::North);
+        manual_map.block_symmetrical_edge(e2, e3, CompassOctant::NorthEast);
         let focusable_areas = vec![
             FocusableArea {
                 entity: e1,
@@ -201,14 +205,14 @@ mod tests {
             &nav_map,
             e1,
             [
-                None,
-                Some(e3), // NE
-                Some(e3), // E
-                Some(e2), // SE
-                Some(e2), // S
-                Some(e4), // SW overrides existing, e4 not in focusable_areas
-                Some(e3), // W, override, new
-                None,
+                NavNeighbor::Blocked, // manual
+                NavNeighbor::Set(e3), // NE
+                NavNeighbor::Set(e3), // E
+                NavNeighbor::Set(e2), // SE
+                NavNeighbor::Set(e2), // S
+                NavNeighbor::Set(e4), // SW overrides existing, e4 not in focusable_areas
+                NavNeighbor::Set(e3), // W, override, new
+                NavNeighbor::Auto,
             ],
         );
 
@@ -216,14 +220,14 @@ mod tests {
             &nav_map,
             e2,
             [
-                Some(e3), // N, overrides existing
-                Some(e3), // NE
-                Some(e3), // E
-                None,
-                None,
-                None,
-                None,
-                Some(e1), // NW
+                NavNeighbor::Set(e3), // N, overrides existing
+                NavNeighbor::Blocked, // manual symmetrically blocked
+                NavNeighbor::Set(e3), // E
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e1), // NW
             ],
         );
 
@@ -231,14 +235,14 @@ mod tests {
             &nav_map,
             e3,
             [
-                None,
-                None,
-                Some(e1), // E, override, new
-                None,
-                Some(e2), // S
-                Some(e2), // SW
-                Some(e1), // W
-                Some(e1), // NW
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e1), // E, override, new
+                NavNeighbor::Auto,
+                NavNeighbor::Set(e2), // S
+                NavNeighbor::Blocked, // manual symmetrically blocked
+                NavNeighbor::Set(e1), // W
+                NavNeighbor::Set(e1), // NW
             ],
         );
 
@@ -247,7 +251,16 @@ mod tests {
         assert_neighbors(
             &nav_map,
             e4,
-            [None, None, None, None, None, None, None, None],
+            [
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+                NavNeighbor::Auto,
+            ],
         );
     }
 }
