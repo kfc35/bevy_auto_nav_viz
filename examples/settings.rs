@@ -14,7 +14,7 @@
 use bevy::ecs::system::SystemParam;
 use bevy::input::keyboard::Key;
 use bevy::input_focus::{
-    InputDispatchPlugin, InputFocus, InputFocusVisible,
+    FocusCause, InputFocus, InputFocusVisible,
     directional_navigation::{DirectionalNavigationMap, DirectionalNavigationPlugin},
 };
 use bevy::math::CompassOctant;
@@ -28,11 +28,7 @@ use bevy_auto_nav_viz::{
 
 fn main() {
     App::new()
-        .add_plugins((
-            DefaultPlugins,
-            InputDispatchPlugin,
-            DirectionalNavigationPlugin,
-        ))
+        .add_plugins((DefaultPlugins, DirectionalNavigationPlugin))
         .insert_resource(InputFocusVisible(true))
         // Add this plugin for the visualization to render.
         .add_plugins(AutoNavVizPlugin)
@@ -191,7 +187,7 @@ fn setup(
             // buttons are added left to right, top to bottom.
             buttons.push(button);
             if i == 1 && j == 1 {
-                input_focus.set(button);
+                input_focus.set(button, FocusCause::Navigated);
             }
         }
     }
